@@ -50,7 +50,6 @@ INSERT INTO "images"
     )
 
 
-
 VALUES
     ('c580fe73-afb3-47d1-a9df-eed24fdaea9b', 'fb1_1.jpg', 'https://i.pinimg.com/564x/4a/1c/4a/4a1c4a9755e4d3bdfcb45a1c3a58712f.jpg', 'P000001'),
     ('43bcd3fa-6f7f-4251-b196-f30ad4ea625e', 'fb1_2.jpg', 'https://i.pinimg.com/564x/4a/1c/4a/4a1c4a9755e4d3bdfcb45a1c3a58712f.jpg', 'P000001'),

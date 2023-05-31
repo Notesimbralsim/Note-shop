@@ -1,53 +1,49 @@
 BEGIN;
 
--- settimezone
+--Set timezone
 SET TIME ZONE 'Asia/Bangkok';
 
---install uuid extension
-CREATE extension IF NOT EXISTS "uuid-ossp";
+--Install uuid extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
---user_id -> U000001
---Products_id -> U000001
+--users_id -> U000001
+--products_id -> U000001
 --orders_id -> U000001
-
---Craete sequence
+--Create sequence
 CREATE SEQUENCE users_id_seq START WITH 1 INCREMENT BY 1;
 CREATE SEQUENCE products_id_seq START WITH 1 INCREMENT BY 1;
 CREATE SEQUENCE orders_id_seq START WITH 1 INCREMENT BY 1;
 
---auto update
-CREATE OR REPLACE FUNCTION set_update_at_column()
+--Auto update
+CREATE OR REPLACE FUNCTION set_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.update_at = now();
-    RETURN NEW;
-END
+    NEW.updated_at = now();
+    RETURN NEW;   
+END;
 $$ language 'plpgsql';
 
 --Create enum
-CREATE TYPE "oder_status" AS ENUM (
-    'witing'
-    'shipping'
-    'completed'
+CREATE TYPE "order_status" AS ENUM (
+    'waiting',
+    'shipping',
+    'completed',
     'canceled'
-)
-
-
-
+);
 
 CREATE TABLE "users" (
-  "id" VARCHAR(7) PRIMARY KEY DEFAULT CONCAT('U' , LPAD(NEXTVAL('users_id_seq')::TEXT, 6 ,'0')),
-  "usersname" VARCHAR UNIQUE NOT NULL,
-  "pasword" VARCHAR NOT NULL,
+  "id" VARCHAR(7) PRIMARY KEY DEFAULT CONCAT('U', LPAD(NEXTVAL('users_id_seq')::TEXT, 6, '0')),
+  "username" VARCHAR UNIQUE NOT NULL,
+  "password" VARCHAR NOT NULL,
   "email" VARCHAR UNIQUE NOT NULL,
   "role_id" INT NOT NULL,
-  "created_at" TIMESTAMP NOT NULL DEFAULT now() ,
+  "created_at" TIMESTAMP NOT NULL DEFAULT now(),
   "updated_at" TIMESTAMP NOT NULL DEFAULT now()
 );
 
-CREATE TABLE "oaute" (
+CREATE TABLE "oauth" (
   "id" uuid NOT NULL UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "users_id" VARCHAR NOT NULL,
+  "user_id" VARCHAR NOT NULL,
   "access_token" VARCHAR NOT NULL,
   "refresh_token" VARCHAR NOT NULL,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
@@ -60,7 +56,7 @@ CREATE TABLE "roles" (
 );
 
 CREATE TABLE "products" (
-  "id" VARCHAR(7) PRIMARY KEY DEFAULT CONCAT('P' , LPAD(NEXTVAL('products_id_seq')::TEXT, 6 ,'0')),
+  "id" VARCHAR(7) PRIMARY KEY DEFAULT CONCAT('P', LPAD(NEXTVAL('products_id_seq')::TEXT, 6, '0')),
   "title" VARCHAR NOT NULL,
   "description" VARCHAR NOT NULL DEFAULT '',
   "price" FLOAT NOT NULL DEFAULT 0,
@@ -72,15 +68,15 @@ CREATE TABLE "images" (
   "id" uuid NOT NULL UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
   "filename" VARCHAR NOT NULL,
   "url" VARCHAR NOT NULL,
-  "products_id" VARCHAR NOT NULL,
+  "product_id" VARCHAR NOT NULL,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
   "updated_at" TIMESTAMP NOT NULL DEFAULT now()
 );
 
 CREATE TABLE "products_categories" (
   "id" uuid NOT NULL UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "products_id" VARCHAR NOT NULL,
-  "categories_id" INT NOT NULL
+  "product_id" VARCHAR NOT NULL,
+  "category_id" INT NOT NULL
 );
 
 CREATE TABLE "categories" (
@@ -89,35 +85,35 @@ CREATE TABLE "categories" (
 );
 
 CREATE TABLE "orders" (
-  "id" VARCHAR(7) PRIMARY KEY DEFAULT CONCAT('O' , LPAD(NEXTVAL('orders_id_seq')::TEXT, 6 ,'0')),
-  "users_id" VARCHAR NOT NULL,
+  "id" VARCHAR(7) PRIMARY KEY DEFAULT CONCAT('O', LPAD(NEXTVAL('orders_id_seq')::TEXT, 6, '0')),
+  "user_id" VARCHAR NOT NULL,
   "contact" VARCHAR NOT NULL,
   "address" VARCHAR NOT NULL,
   "transfer_slip" jsonb,
-  "status" oder_status NOT NULL,
+  "status" order_status NOT NULL,
   "created_at" TIMESTAMP NOT NULL DEFAULT now(),
   "updated_at" TIMESTAMP NOT NULL DEFAULT now()
 );
 
 CREATE TABLE "products_orders" (
-  "id" uuid NOT NULL UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),,
+  "id" uuid NOT NULL UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
   "order_id" VARCHAR NOT NULL,
   "qty" INT NOT NULL DEFAULT 1,
-  "priduct" jsonb
+  "product" jsonb
 );
 
-ALTER TABLE "users" ADD FOREIGN KEY ("role_id") REFERENCES "roles" ("id");
-ALTER TABLE "oaute" ADD FOREIGN KEY ("users_id") REFERENCES "users" ("id");
-ALTER TABLE "images" ADD FOREIGN KEY ("products_id") REFERENCES "products" ("id");
-ALTER TABLE "products_categories" ADD FOREIGN KEY ("products_id") REFERENCES "products" ("id");
-ALTER TABLE "products_categories" ADD FOREIGN KEY ("categories_id") REFERENCES "categories" ("id");
-ALTER TABLE "orders" ADD FOREIGN KEY ("users_id") REFERENCES "users" ("id");
-ALTER TABLE "orders" ADD FOREIGN KEY ("id") REFERENCES "products_orders" ("order_id");
+ALTER TABLE "users" ADD FOREIGN KEY ("role_id") REFERENCES "roles" ("id") ON DELETE CASCADE;
+ALTER TABLE "oauth" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id")  ON DELETE CASCADE;
+ALTER TABLE "images" ADD FOREIGN KEY ("product_id") REFERENCES "products" ("id")  ON DELETE CASCADE;
+ALTER TABLE "products_categories" ADD FOREIGN KEY ("product_id") REFERENCES "products" ("id") ON DELETE CASCADE;
+ALTER TABLE "products_categories" ADD FOREIGN KEY ("category_id") REFERENCES "categories" ("id") ON DELETE CASCADE;
+ALTER TABLE "orders" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE;
+ALTER TABLE "products_orders" ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id") ON DELETE CASCADE;
 
-CREATE TRIGGER set_update_at_timestamp_users_table BEFORE UPDATE ON "users" FOR EACH ROW EXECUTE PROCEDURE set_update_at_column()
-CREATE TRIGGER set_update_at_timestamp_oauth_table BEFORE UPDATE ON "oauth" FOR EACH ROW EXECUTE PROCEDURE set_update_at_column()
-CREATE TRIGGER set_update_at_timestamp_products_table BEFORE UPDATE ON "products" FOR EACH ROW EXECUTE PROCEDURE set_update_at_column()
-CREATE TRIGGER set_update_at_timestamp_images_table BEFORE UPDATE ON "images" FOR EACH ROW EXECUTE PROCEDURE set_update_at_column()
-CREATE TRIGGER set_update_at_timestamp_orders_table BEFORE UPDATE ON "orders" FOR EACH ROW EXECUTE PROCEDURE set_update_at_column()
+CREATE TRIGGER set_updated_at_timestamp_users_table BEFORE UPDATE ON "users" FOR EACH ROW EXECUTE PROCEDURE set_updated_at_column();
+CREATE TRIGGER set_updated_at_timestamp_oauth_table BEFORE UPDATE ON "oauth" FOR EACH ROW EXECUTE PROCEDURE set_updated_at_column();
+CREATE TRIGGER set_updated_at_timestamp_products_table BEFORE UPDATE ON "products" FOR EACH ROW EXECUTE PROCEDURE set_updated_at_column();
+CREATE TRIGGER set_updated_at_timestamp_images_table BEFORE UPDATE ON "images" FOR EACH ROW EXECUTE PROCEDURE set_updated_at_column();
+CREATE TRIGGER set_updated_at_timestamp_orders_table BEFORE UPDATE ON "orders" FOR EACH ROW EXECUTE PROCEDURE set_updated_at_column();
 
 COMMIT;
